@@ -1,3 +1,14 @@
+//fuse
+#define FUSE_USE_VERSION 30
+#include <config.h>
+#include <fuse.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stddef.h>
+#include <assert.h>
+//stl
 #include <stdio.h>
 #include <stdlib.h>
 #include "c_list.h"
@@ -5,6 +16,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+//openssl
 #include <openssl/sha.h>   
 #include <openssl/crypto.h>  // OPENSSL_cleanse  
 #define granularity 1024//文件粒度
@@ -26,7 +38,6 @@ struct file_use//map
 void save_file_info(c_list  lt,const char *file)
 {
     FILE *fp;
-    int i;
     if((fp=fopen(file,"wb"))==NULL)
     {
         printf("canot open the file.");
@@ -98,7 +109,6 @@ void read_file_info(const char *file,c_list file_message)
 int copy_file_to_filebuf(const char *file,char filebuf[])
 {
     FILE *fp;
-    int i;
     if((fp=fopen(file,"rb"))==NULL)
     {
         printf("cant open the file");
