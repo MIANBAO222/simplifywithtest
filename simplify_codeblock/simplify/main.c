@@ -114,7 +114,7 @@ static int buf_sha_calculate(const char *buf,char *hashreturn){//hashreturn hash
 SHA_CTX stx;
 SHA1_Update(&stx,buf,1024);
 SHA1_Final(hashreturn,&stx);
-hashreturn[21]='/0';
+hashreturn[21]='\0';
 return 0;
 }
 /*

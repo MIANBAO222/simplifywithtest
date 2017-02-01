@@ -1,1 +1,2 @@
 gcc -Wall `pkg-config fuse3 --cflags --libs` hello.c -o hello
+安装 openssl openssl-devel

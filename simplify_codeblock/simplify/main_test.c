@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <openssl/sha.h>   
+#include <openssl/crypto.h>  // OPENSSL_cleanse  
 #define granularity 1024//文件粒度
 
 struct file_info//list
@@ -20,31 +22,7 @@ struct file_use//map
     int use_num;
 };
 
-//读取文件信息表
-int write_fileinfo_into_list(c_list file_list, const char* path)
-{
-    int fd;
-    if((fd = open(path,O_RDONLY)) > 0)
-    {
-        struct file_info *new_one;
-        new_one = malloc(sizeof(struct file_info));
-        while(read(fd, new_one, sizeof(new_one)) == sizeof(new_one))
-        {
-            c_list_push_back(&file_list, new_one);
-            printf("%d", new_one->shadow_mark);
-            printf("%d", new_one->size);
-            new_one = malloc(sizeof(struct file_info));
-        }
-        free(new_one);
-    }
-    else
-    {
-        printf("%s\n", "open_error" );
-        return -1;
-    }
-    close(fd);
-    return 0;
-}
+//保存文件块表
 void save_file_info(c_list  lt,const char *file)
 {
     FILE *fp;
@@ -70,6 +48,7 @@ void save_file_info(c_list  lt,const char *file)
 
     fclose(fp);
 }
+//读取文件块表
 void read_file_info(const char *file,c_list file_message)
 {
     FILE *fp;
@@ -99,7 +78,7 @@ void read_file_info(const char *file,c_list file_message)
             if(fread(&buf,sizeof(struct file_info),1,fp)!=1) printf("file write error\n");
             printf("%s --end >> \n",buf.hash);
             printf("%d--end >> \n",buf.shadow_mark);
-            printf("%d --end >> \n",buf.size);
+            printf("%zu --end >> \n",buf.size);
             struct file_info *message;
             message = (struct file_info*)malloc(sizeof(struct file_info));
             strcpy(message->hash,buf.hash);
@@ -115,6 +94,7 @@ void read_file_info(const char *file,c_list file_message)
 
     fclose(fp);
 }
+//读取块文件
 int copy_file_to_filebuf(const char *file,char filebuf[])
 {
     FILE *fp;
@@ -134,6 +114,16 @@ int copy_file_to_filebuf(const char *file,char filebuf[])
     }
     fclose(fp);
     return 1;
+}
+//计算哈希值
+static int buf_sha_calculate(const char *buf,char *hashreturn,size_t length){//hashreturn hash/0
+SHA_CTX stx;
+SHA1_Update(&stx,buf,length);
+unsigned char md[SHA_DIGEST_LENGTH];  
+SHA1_Final(md,&stx);
+strncpy(hashreturn,md,SHA_DIGEST_LENGTH);
+hashreturn[21]='\0';
+return 0;
 }
 int main()
 {
@@ -169,7 +159,7 @@ int main()
         struct file_info *one=((struct file_info *)ITER_REF(iter));
         printf("%s\n", one->hash);
         printf("%d\n", one->shadow_mark);
-        printf("%d\n", one->size);
+        printf("%zu\n", one->size);
         char filebuf[granularity+1]={0};
         copy_file_to_filebuf(one->hash,filebuf);
         printf("%s\n", filebuf);
