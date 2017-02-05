@@ -66,7 +66,7 @@ void read_file_info(const char *file,c_list file_message)
     int i;
     if((fp=fopen(file,"rb"))==NULL)
     {
-        printf("cant open the file");
+        printf("can`t open the file");
         exit(0);
     }
 
@@ -111,7 +111,7 @@ int copy_file_to_filebuf(const char *file,char filebuf[])
     FILE *fp;
     if((fp=fopen(file,"rb"))==NULL)
     {
-        printf("cant open the file");
+        printf("cant open -->%s\n",file);
         exit(0);
     }
     fseek(fp,0,SEEK_END); //定位到文件末
@@ -125,14 +125,40 @@ int copy_file_to_filebuf(const char *file,char filebuf[])
     fclose(fp);
     return 1;
 }
+//输出哈希值
+void printHash(unsigned char *md, int len)  
+{  
+    int i = 0;  
+    for (i = 0; i < len; i++)  
+    {  
+        printf("%02x", md[i]);  
+    }  
+  
+    printf("\n");  
+} 
+void saveHash(unsigned char *md, int len,char *str)
+{
+    unsigned char hash[3];
+        int i = 0;  
+    for (i = 0; i < len; i++)  
+    {  
+        // printf("%02x", md[i]);  
+        snprintf(hash, sizeof(hash), "%02x",md[i]);
+        strncpy(str+2*i,hash,2);
+    }  
+}
 //计算哈希值
-static int buf_sha_calculate(const char *buf,char *hashreturn,size_t length){//hashreturn hash/0
-SHA_CTX stx;
-SHA1_Update(&stx,buf,length);
+static int buf_sha_calculate(const char *buf,unsigned char *hashreturn){//hashreturn hash/0
+// SHA_CTX stx;
 unsigned char md[SHA_DIGEST_LENGTH];  
-SHA1_Final(md,&stx);
+SHA1((unsigned char *)buf, strlen(buf), md);  
+// printHash(md, SHA_DIGEST_LENGTH); 
+// SHA1_Init(&stx);  
+// SHA1_Update(&stx,buf,strlen(buf));
+// SHA1_Final(md,&stx);
+// OPENSSL_cleanse(&stx, sizeof(stx));  
+// printHash(md, SHA_DIGEST_LENGTH);  
 strncpy(hashreturn,md,SHA_DIGEST_LENGTH);
-hashreturn[21]='\0';
 return 0;
 }
 int main()
@@ -155,6 +181,9 @@ int main()
     save_file_info(file_list,file);
 
     //start test
+    unsigned char hashreturn[20]={0};
+    char hashtostr[41]={0};
+    hashtostr[41]='\0';
     const char *buf="abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
     size_t daxiao=52;//daxiao
     off_t juli=1020;//kaishi
@@ -173,6 +202,9 @@ int main()
         char filebuf[granularity+1]={0};
         copy_file_to_filebuf(one->hash,filebuf);
         printf("%s\n", filebuf);
+        buf_sha_calculate(filebuf,hashreturn);
+        saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); 
+        printf("%s\n",hashtostr );
         if(one->size>juli){// 这个文件开始写入
             if(juli>0){//数格子，写入
                 off_t nowjuli=juli;//开始写入位置
