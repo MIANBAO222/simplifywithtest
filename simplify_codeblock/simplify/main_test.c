@@ -49,7 +49,7 @@ void save_file_info(c_list  lt,const char *file)
     for(iter = first; !ITER_EQUAL(iter, last); ITER_INC(iter))
     {
         struct file_info *one=((struct file_info *)ITER_REF(iter));
-        printf("%s\n", one->hash);
+        printf("savingfileinfo--->%s\n", one->hash);
            if(fwrite(one,sizeof(struct file_info),1,fp)!=1)
     {
         printf("file write error\n");
@@ -180,6 +180,15 @@ SHA1((unsigned char *)buf, strlen(buf), md);
 strncpy(hashreturn,md,SHA_DIGEST_LENGTH);
 return 0;
 }
+void insert_empty_node(c_list lt){
+    printf("%s\n","扩展");
+    struct file_info *add_last;
+    add_last = (struct file_info*)malloc(sizeof(struct file_info));
+    strcpy(add_last->hash, "");
+    add_last->last_mark = 1;
+    add_last->size = 0;
+     c_list_push_back(&lt, add_last);
+}
 int main()
 {
     const char *file="filetest";
@@ -268,97 +277,83 @@ int main()
         else//最后一个
         {
             printf("lastfile--->juli%d\n", juli);
-            if(strcmp(one->hash,"")==0)//扩展出来的空文件
+        // if(strcmp(one->hash,"")==0)//扩展出来的空文件
+            printf("lastfile--->juli%d\n", juli);
+            if(granularity>=juli)// 这个文件写入
             {
-                
-            }
-            else//不是扩展出来的空文件
-            {
-                printf("lastfile--->juli%d\n", juli);
-                if(granularity>=juli)// 这个文件写入
-                {
-                    printf("granularity>juli--->%d\n", juli);
-                    off_t nowjuli=juli;//开始写入位置
-                    juli=0;
-                    size_t nowdaxia=granularity-nowjuli;//可以写入的的大小
-                    if(nowdaxia<daxiao-buf_juli)
-                    {
-                        char filebuf[granularity]={0};
-                        if(copy_file_to_filebuf(one->hash,one->size,filebuf)==0)
-                        {
-                            if(one->size<nowjuli)
-                            {
-                                memset(filebuf+one->size, '\0', nowjuli-one->size); 
-                            }
-                            strncpy(filebuf+nowjuli,buf+buf_juli,nowdaxia);//写入filebuf
-                            buf_juli=buf_juli+nowdaxia;
-                            buf_sha_calculate(filebuf,hashreturn);//计算
-                            saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
-                            printf("%s\n",hashtostr );
-                            strcpy(one->hash, hashtostr);
-                            one->size=nowjuli+nowdaxia;
-                            one->last_mark=0;
-                            save_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
-                            //扩展
-                            printf("%s\n","扩展");
-                            struct file_info *add_last;
-                            add_last = (struct file_info*)malloc(sizeof(struct file_info));
-                            strcpy(add_last->hash, "");
-                            add_last->last_mark = 1;
-                            add_last->size = 0;
-                             c_list_push_back(&lt, add_last);
-                            last = c_list_end(&lt);
-                        }
-                    }
-                    else//nowdaxia>=daxiao-buf_juli
-                    {
-                        char filebuf[granularity]={0};
-                        if(copy_file_to_filebuf(one->hash,one->size,filebuf)==0)
-                        {
-                            if(one->size<nowjuli)
-                            {
-                                memset(filebuf+one->size, '\0', nowjuli-one->size); 
-                            }
-                            strncpy(filebuf+nowjuli,buf+buf_juli,daxiao);//写入filebuf
-                            buf_juli=buf_juli+daxiao;
-                            buf_sha_calculate(filebuf,hashreturn);//计算
-                            saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
-                            printf("%s\n",hashtostr );
-                            strcpy(one->hash, hashtostr);
-                            one->size=nowjuli+nowdaxia;
-                            save_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
-                            break;//写完了
-                        }
-                    }
-                }
-                else//granularity<juli
+                printf("granularity>juli--->%d\n", juli);
+                off_t nowjuli=juli;//开始写入位置
+                juli=0;
+                size_t nowdaxia=granularity-nowjuli;//可以写入的的大小
+                if(nowdaxia<daxiao-buf_juli)
                 {
                     char filebuf[granularity]={0};
-                    if(copy_file_to_filebuf(one->hash,one->size,filebuf)==0)
+                    int openflag=copy_file_to_filebuf(one->hash,one->size,filebuf);
+                    if(openflag==0|strcmp(one->hash,"")==0)
                     {
-                        memset(filebuf+one->size, '\0', granularity-one->size); 
+                        if(one->size<nowjuli)
+                        {
+                            memset(filebuf+one->size, '\0', nowjuli-one->size); 
+                        }
+                        strncpy(filebuf+nowjuli,buf+buf_juli,nowdaxia);//写入filebuf
+                        buf_juli=buf_juli+nowdaxia;
                         buf_sha_calculate(filebuf,hashreturn);//计算
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
                         strcpy(one->hash, hashtostr);
-                        one->size=granularity;
+                        one->size=nowjuli+nowdaxia;
                         one->last_mark=0;
                         save_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
                         //扩展
-                        struct file_info *add_last;
-                        add_last = (struct file_info*)malloc(sizeof(struct file_info));
-                        strcpy(add_last->hash,"");
-                        add_last->last_mark = 1;
-                        add_last->size = 0;
-                        c_list_push_back(&lt, add_last);
-                         last = c_list_end(&lt);
+                        insert_empty_node(lt);
+                        last = c_list_end(&lt);
                     }
-                    juli=juli-granularity;
+                }
+                else//nowdaxia>=daxiao-buf_juli
+                {
+                    char filebuf[granularity]={0};
+                    int openflag=copy_file_to_filebuf(one->hash,one->size,filebuf);
+                    if(openflag==0|strcmp(one->hash,"")==0)
+                    {
+                        if(one->size<nowjuli)
+                        {
+                            memset(filebuf+one->size, '\0', nowjuli-one->size); 
+                        }
+                        strncpy(filebuf+nowjuli,buf+buf_juli,daxiao);//写入filebuf
+                        buf_juli=buf_juli+daxiao;
+                        buf_sha_calculate(filebuf,hashreturn);//计算
+                        saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
+                        printf("%s\n",hashtostr );
+                        strcpy(one->hash, hashtostr);
+                        one->size=nowjuli+nowdaxia;
+                        save_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
+                        break;//写完了
+                    }
                 }
             }
-
+            else//granularity<juli
+            {
+                char filebuf[granularity]={0};
+                int openflag=copy_file_to_filebuf(one->hash,one->size,filebuf);
+                if(openflag==0|strcmp(one->hash,"")==0)
+                {
+                    memset(filebuf+one->size, '\0', granularity-one->size); 
+                    buf_sha_calculate(filebuf,hashreturn);//计算
+                    saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
+                    printf("%s\n",hashtostr );
+                    strcpy(one->hash, hashtostr);
+                    one->size=granularity;
+                    one->last_mark=0;
+                    save_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
+                    //扩展
+                     insert_empty_node(lt);
+                     last = c_list_end(&lt);
+                }
+                juli=juli-granularity;
+            }
         }
     }
+    save_file_info(lt,file);
     return 0;
 }
 
