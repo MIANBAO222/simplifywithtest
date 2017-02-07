@@ -54,9 +54,7 @@ void save_file_info(c_list  lt,const char *file)
     {
         printf("file write error\n");
     }
-
     }
-
     fclose(fp);
 }
 //读取文件块表
@@ -136,6 +134,7 @@ void save_filebuf_to_file(const char *file,size_t length,char filebuf[])
     FILE *fp;
     if((fp=fopen(file,"rb"))!=NULL)//存在
     {
+        printf("file ---->%s-----exist\n",file);
         fclose(fp);
         return;
     }
@@ -146,8 +145,31 @@ void save_filebuf_to_file(const char *file,size_t length,char filebuf[])
     }
     if(fwrite(filebuf,length,1,fp)!=1)
     {
-        printf("file write error---->%s\n",file);
+        printf("save file ---->---->%s-----error\n",file);
     }
+    printf("save file ---->%s-----sucess\n",file);
+    fclose(fp);
+}
+void save_temporary_filebuf_to_file(const char *file,size_t length,char filebuf[])
+{
+    FILE *fp;
+    if((fp=fopen(file,"rb"))!=NULL)//存在
+    {
+        printf("file ---->%s-----exist\n",file);
+        fclose(fp);
+        return;
+    }
+    strcat(file,".tem");
+    if((fp=fopen(file,"wb"))==NULL)
+    {
+        printf("canot open the file.");
+        exit(0);
+    }
+    if(fwrite(filebuf,length,1,fp)!=1)
+    {
+        printf("save file ---->---->%s-----error\n",file);
+    }
+    printf("save file ---->%s-----sucess\n",file);
     fclose(fp);
 }
 //输出哈希值
@@ -214,7 +236,7 @@ int main()
     hashtostr[41]='\0';
     const char *buf="abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
     size_t daxiao=52;//daxiao
-    off_t juli=2044;//kaishi
+    off_t juli=1024;//kaishi
     c_list lt;
     c_iterator iter, first, last;
     c_list_create(&lt, NULL);
@@ -225,7 +247,7 @@ int main()
     int i=1;
     for(iter = first; !ITER_EQUAL(iter, last); ITER_INC(iter))
     {
-        printf("---->%d\n", i);
+        printf("NO.%dFILE\n", i);
         i++;
         struct file_info *one=((struct file_info *)ITER_REF(iter));
         printf("%s\n", one->hash);
@@ -235,7 +257,7 @@ int main()
         {
             if(granularity>juli)// 这个文件写入
             {
-                printf("granularity>juli--->%d\n", juli);
+                printf("granularity>juli--->%ld\n", juli);
                 off_t nowjuli=juli;//开始写入位置
                 juli=0;
                 size_t nowdaxia=granularity-nowjuli;//可以写入的的大小
@@ -250,7 +272,7 @@ int main()
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
                         strcpy(one->hash, hashtostr);
-                        save_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
+                        save_temporary_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
                     }
                 }
                 else//nowdaxia>daxiao-buf_juli
@@ -264,7 +286,7 @@ int main()
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
                         strcpy(one->hash, hashtostr);
-                        save_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
+                        save_temporary_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
                         break;//写完了
                     }
                 }
@@ -276,12 +298,11 @@ int main()
         }
         else//最后一个
         {
-            printf("lastfile--->juli%d\n", juli);
         // if(strcmp(one->hash,"")==0)//扩展出来的空文件
-            printf("lastfile--->juli%d\n", juli);
+            printf("lastfile+juli--->%ld\n", juli);
             if(granularity>=juli)// 这个文件写入
             {
-                printf("granularity>juli--->%d\n", juli);
+                printf("granularity>juli=--->%ld\n", juli);
                 off_t nowjuli=juli;//开始写入位置
                 juli=0;
                 size_t nowdaxia=granularity-nowjuli;//可以写入的的大小
@@ -303,10 +324,14 @@ int main()
                         strcpy(one->hash, hashtostr);
                         one->size=nowjuli+nowdaxia;
                         one->last_mark=0;
-                        save_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
+                        save_temporary_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
                         //扩展
                         insert_empty_node(lt);
                         last = c_list_end(&lt);
+                    }
+                    else//既不是扩展的空文件也没找到文件
+                    {
+                        printf("NOFOUND!!!!!ERROR!!!!!!!!--->%s\n", one->hash);
                     }
                 }
                 else//nowdaxia>=daxiao-buf_juli
@@ -326,8 +351,12 @@ int main()
                         printf("%s\n",hashtostr );
                         strcpy(one->hash, hashtostr);
                         one->size=nowjuli+nowdaxia;
-                        save_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
+                        save_temporary_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
                         break;//写完了
+                    }
+                    else//既不是扩展的空文件也没找到文件
+                    {
+                        printf("NOFOUND!!!!!ERROR!!!!!!!!--->%s\n", one->hash);
                     }
                 }
             }
@@ -344,10 +373,14 @@ int main()
                     strcpy(one->hash, hashtostr);
                     one->size=granularity;
                     one->last_mark=0;
-                    save_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
+                    save_temporary_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
                     //扩展
                      insert_empty_node(lt);
                      last = c_list_end(&lt);
+                }
+                else//既不是扩展的空文件也没找到文件
+                {
+                    printf("NOFOUND!!!!!ERROR!!!!!!!!--->%s\n", one->hash);
                 }
                 juli=juli-granularity;
             }
