@@ -195,10 +195,12 @@ void saveHash(unsigned char *md, int len,char *str)
     }  
 }
 //计算哈希值
-static int buf_sha_calculate(const char *buf,unsigned char *hashreturn){//hashreturn hash/0
+static int buf_sha_calculate(const char *buf,size_t length,unsigned char *hashreturn){//hashreturn hash/0
 // SHA_CTX stx;
 unsigned char md[SHA_DIGEST_LENGTH];  
-SHA1((unsigned char *)buf, strlen(buf), md);  
+// printf("buf-->%s\n", buf);
+printf("strlen(buf)--->%d\n", length);
+SHA1((unsigned char *)buf, length, md);  
 strncpy(hashreturn,md,SHA_DIGEST_LENGTH);
 return 0;
 }
@@ -224,7 +226,7 @@ int main()
     //make a test list
     c_list_push_back(&file_list, new_one);
     new_one = (struct file_info*)malloc(sizeof(struct file_info));
-    strcpy(new_one->hash, "7e078c40616dc706f55a6f348a624a6d5384dec7");
+    strcpy(new_one->hash, "403361df2e96de4e9e694e0e888a442df3b54e82");
     new_one->last_mark=1;
     new_one->size = granularity;
     c_list_push_back(&file_list, new_one);
@@ -266,9 +268,9 @@ int main()
                     char filebuf[granularity]={0};
                     if(copy_file_to_filebuf(one->hash,one->size,filebuf)==0)
                     {
-                        strncpy(filebuf+nowjuli,buf+buf_juli,nowdaxia);//写入filebuf
+                        memcpy(filebuf+nowjuli,buf+buf_juli,nowdaxia);//写入filebuf
                         buf_juli=buf_juli+nowdaxia;
-                        buf_sha_calculate(filebuf,hashreturn);//计算
+                        buf_sha_calculate(filebuf,granularity,hashreturn);//计算
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
                         strcpy(one->hash, hashtostr);
@@ -280,9 +282,9 @@ int main()
                     char filebuf[granularity]={0};
                     if(copy_file_to_filebuf(one->hash,one->size,filebuf)==0)
                     {
-                        strncpy(filebuf+nowjuli,buf+buf_juli,daxiao);//写入filebuf
+                        memcpy(filebuf+nowjuli,buf+buf_juli,daxiao);//写入filebuf
                         buf_juli=buf_juli+daxiao;
-                        buf_sha_calculate(filebuf,hashreturn);//计算
+                        buf_sha_calculate(filebuf,granularity,hashreturn);//计算
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
                         strcpy(one->hash, hashtostr);
@@ -316,9 +318,9 @@ int main()
                         {
                             memset(filebuf+one->size, '\0', nowjuli-one->size); 
                         }
-                        strncpy(filebuf+nowjuli,buf+buf_juli,nowdaxia);//写入filebuf
+                        memcpy(filebuf+nowjuli,buf+buf_juli,nowdaxia);//写入filebuf
                         buf_juli=buf_juli+nowdaxia;
-                        buf_sha_calculate(filebuf,hashreturn);//计算
+                        buf_sha_calculate(filebuf,nowjuli+nowdaxia,hashreturn);//计算
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
                         strcpy(one->hash, hashtostr);
@@ -344,9 +346,10 @@ int main()
                         {
                             memset(filebuf+one->size, '\0', nowjuli-one->size); 
                         }
-                        strncpy(filebuf+nowjuli,buf+buf_juli,daxiao);//写入filebuf
+                        memcpy(filebuf+nowjuli,buf+buf_juli,daxiao);//写入filebuf
                         buf_juli=buf_juli+daxiao;
-                        buf_sha_calculate(filebuf,hashreturn);//计算
+                        printf("nowjuli+nowdaxia--->%d\n", nowjuli+nowdaxia);
+                        buf_sha_calculate(filebuf,nowjuli+nowdaxia,hashreturn);//计算
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
                         strcpy(one->hash, hashtostr);
@@ -367,7 +370,7 @@ int main()
                 if(openflag==0|strcmp(one->hash,"")==0)
                 {
                     memset(filebuf+one->size, '\0', granularity-one->size); 
-                    buf_sha_calculate(filebuf,hashreturn);//计算
+                    buf_sha_calculate(filebuf,granularity,hashreturn);//计算
                     saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                     printf("%s\n",hashtostr );
                     strcpy(one->hash, hashtostr);
@@ -386,6 +389,9 @@ int main()
             }
         }
     }
+    //
+    
+    //
     save_file_info(lt,file);
     return 0;
 }
