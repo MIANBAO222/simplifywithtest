@@ -153,23 +153,27 @@ void save_filebuf_to_file(const char *file,size_t length,char filebuf[])
 void save_temporary_filebuf_to_file(const char *file,size_t length,char filebuf[])
 {
     FILE *fp;
-    if((fp=fopen(file,"rb"))!=NULL)//存在
+        char tem[44];
+    strcpy(tem,file);
+    strcat(tem,".tem");
+    if((fp=fopen(tem,"rb"))!=NULL)//存在
     {
-        printf("file ---->%s-----exist\n",file);
+        printf("file ---->%s-----exist\n",tem);
         fclose(fp);
         return;
     }
-    strcat(file,".tem");
-    if((fp=fopen(file,"wb"))==NULL)
+
+    if((fp=fopen(tem,"wb"))==NULL)
     {
         printf("canot open the file.");
         exit(0);
     }
+    printf("length-->%d\n", length);
     if(fwrite(filebuf,length,1,fp)!=1)
     {
-        printf("save file ---->---->%s-----error\n",file);
+        printf("save file ---->---->%s-----error\n",tem);
     }
-    printf("save file ---->%s-----sucess\n",file);
+    printf("save file ---->%s-----sucess\n",tem);
     fclose(fp);
 }
 //输出哈希值
@@ -238,7 +242,7 @@ int main()
     hashtostr[41]='\0';
     const char *buf="abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
     size_t daxiao=52;//daxiao
-    off_t juli=1024;//kaishi
+    off_t juli=2044;//kaishi
     c_list lt;
     c_iterator iter, first, last;
     c_list_create(&lt, NULL);
@@ -270,6 +274,7 @@ int main()
                     {
                         memcpy(filebuf+nowjuli,buf+buf_juli,nowdaxia);//写入filebuf
                         buf_juli=buf_juli+nowdaxia;
+                        printf("buf_juli--->%d\n", buf_juli);
                         buf_sha_calculate(filebuf,granularity,hashreturn);//计算
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
@@ -282,12 +287,13 @@ int main()
                     char filebuf[granularity]={0};
                     if(copy_file_to_filebuf(one->hash,one->size,filebuf)==0)
                     {
-                        memcpy(filebuf+nowjuli,buf+buf_juli,daxiao);//写入filebuf
-                        buf_juli=buf_juli+daxiao;
+                        memcpy(filebuf+nowjuli,buf+buf_juli,daxiao-buf_juli);//写入filebuf
+                        printf("buf_juli--->%d\n", buf_juli);
                         buf_sha_calculate(filebuf,granularity,hashreturn);//计算
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
                         strcpy(one->hash, hashtostr);
+                        buf_juli=buf_juli+daxiao-buf_juli;
                         save_temporary_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
                         break;//写完了
                     }
@@ -310,6 +316,8 @@ int main()
                 size_t nowdaxia=granularity-nowjuli;//可以写入的的大小
                 if(nowdaxia<daxiao-buf_juli)
                 {
+                    printf("daxiao--->%d\n", daxiao);
+                    printf("buf_juli--->%d\n", buf_juli);
                     char filebuf[granularity]={0};
                     int openflag=copy_file_to_filebuf(one->hash,one->size,filebuf);
                     if(openflag==0|strcmp(one->hash,"")==0)
@@ -346,14 +354,14 @@ int main()
                         {
                             memset(filebuf+one->size, '\0', nowjuli-one->size); 
                         }
-                        memcpy(filebuf+nowjuli,buf+buf_juli,daxiao);//写入filebuf
-                        buf_juli=buf_juli+daxiao;
+                        memcpy(filebuf+nowjuli,buf+buf_juli,daxiao-buf_juli);//写入filebuf
                         printf("nowjuli+nowdaxia--->%d\n", nowjuli+nowdaxia);
-                        buf_sha_calculate(filebuf,nowjuli+nowdaxia,hashreturn);//计算
+                        buf_sha_calculate(filebuf,nowjuli+daxiao-buf_juli,hashreturn);//计算
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
                         strcpy(one->hash, hashtostr);
-                        one->size=nowjuli+nowdaxia;
+                        one->size=nowjuli+daxiao-buf_juli;
+                        buf_juli=buf_juli+daxiao-buf_juli;
                         save_temporary_filebuf_to_file(hashtostr,one->size,filebuf);//先保存临时文件
                         break;//写完了
                     }
