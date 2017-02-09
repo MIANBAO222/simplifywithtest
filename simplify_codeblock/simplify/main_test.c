@@ -64,8 +64,14 @@ void read_file_info(const char *file,c_list file_message)
     int i;
     if((fp=fopen(file,"rb"))==NULL)
     {
-        printf("can`t open the file");
-        exit(0);
+        printf("NEWFILE");
+        struct file_info *newfileinfo;
+        newfileinfo = (struct file_info*)malloc(sizeof(struct file_info));
+            strcpy(newfileinfo->hash,"");
+            newfileinfo->last_mark = 1;
+            newfileinfo->size = 0;
+            c_list_push_back(&file_message, newfileinfo);
+        return;
     }
 
     fseek(fp,0,SEEK_END); //定位到文件末
