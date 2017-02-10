@@ -14,7 +14,6 @@ int main(){
 // printf("%d\n", test.second);
 	char *path="/";
 	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
-
 	strcpy(pmfs,PATH_PMFS);
 	strcat(pmfs,path);
 	printf("pmfs--->%s\n", pmfs);
