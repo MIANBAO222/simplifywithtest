@@ -22,7 +22,9 @@
  * \include passthrough.c
  */
 
-
+#include <stdio.h>
+#include <stdlib.h>
+ 
 #define FUSE_USE_VERSION 30
 #define PATH_PMFS "/mnt/pmfs"
 #ifdef HAVE_CONFIG_H
@@ -60,35 +62,47 @@ static int xmp_getattr(const char *path, struct stat *stbuf,
 {
 	(void) fi;
 	int res;
-
-	res = lstat(path, stbuf);
-	if (res == -1)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	res = lstat(pmfs, stbuf);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
-
+	}
+	free(pmfs);
 	return 0;
 }
 
 static int xmp_access(const char *path, int mask)
 {
 	int res;
-	char *pmfs=PATH_PMFS;
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
 	strcat(pmfs,path);
-	res = access(path, mask);
-	if (res == -1)
+	res = access(pmfs, mask);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
-
+	}
+	free(pmfs);
 	return 0;
 }
 
 static int xmp_readlink(const char *path, char *buf, size_t size)
 {
 	int res;
-
-	res = readlink(path, buf, size - 1);
-	if (res == -1)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	res = readlink(pmfs, buf, size - 1);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
+	}
 
 	buf[res] = '\0';
+	free(pmfs);
 	return 0;
 }
 
@@ -99,14 +113,19 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 {
 	DIR *dp;
 	struct dirent *de;
-	printf("!!!!!!!!!!path--->%s",path);
+
 	(void) offset;
 	(void) fi;
 	(void) flags;
-
-	dp = opendir(path);
-	if (dp == NULL)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	printf("!!!!!!!!!!path--->%s",pmfs);
+	dp = opendir(pmfs);
+	if (dp == NULL){
+		free(pmfs);
 		return -errno;
+	}
 
 	while ((de = readdir(dp)) != NULL) {
 		struct stat st;
@@ -118,34 +137,41 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	}
 
 	closedir(dp);
+	free(pmfs);
 	return 0;
 }
 
 static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 {
 	int res;
-
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
 	/* On Linux this could just be 'mknod(path, mode, rdev)' but this
 	   is more portable */
 	if (S_ISREG(mode)) {
-		res = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
+		res = open(pmfs, O_CREAT | O_EXCL | O_WRONLY, mode);
 		if (res >= 0)
 			res = close(res);
 	} else if (S_ISFIFO(mode))
-		res = mkfifo(path, mode);
+		res = mkfifo(pmfs, mode);
 	else
-		res = mknod(path, mode, rdev);
-	if (res == -1)
+		res = mknod(pmfs, mode, rdev);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
-
+	}
+	free(pmfs);
 	return 0;
 }
 
 static int xmp_mkdir(const char *path, mode_t mode)
 {
 	int res;
-
-	res = mkdir(path, mode);
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	res = mkdir(pmfs, mode);
 	if (res == -1)
 		return -errno;
 
@@ -155,8 +181,11 @@ static int xmp_mkdir(const char *path, mode_t mode)
 static int xmp_unlink(const char *path)
 {
 	int res;
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
 
-	res = unlink(path);
+	res = unlink(pmfs);
 	if (res == -1)
 		return -errno;
 
@@ -166,8 +195,11 @@ static int xmp_unlink(const char *path)
 static int xmp_rmdir(const char *path)
 {
 	int res;
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
 
-	res = rmdir(path);
+	res = rmdir(pmfs);
 	if (res == -1)
 		return -errno;
 
@@ -215,11 +247,15 @@ static int xmp_chmod(const char *path, mode_t mode,
 {
 	(void) fi;
 	int res;
-
-	res = chmod(path, mode);
-	if (res == -1)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	res = chmod(pmfs, mode);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
-
+	}
+	free(pmfs);
 	return 0;
 }
 
@@ -228,11 +264,15 @@ static int xmp_chown(const char *path, uid_t uid, gid_t gid,
 {
 	(void) fi;
 	int res;
-
-	res = lchown(path, uid, gid);
-	if (res == -1)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	res = lchown(pmfs, uid, gid);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
-
+	}
+	free(pmfs);
 	return 0;
 }
 
@@ -241,11 +281,15 @@ static int xmp_truncate(const char *path, off_t size,
 {
 	(void) fi;
 	int res;
-
-	res = truncate(path, size);
-	if (res == -1)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	res = truncate(pmfs, size);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
-
+	}
+	free(pmfs);
 	return 0;
 }
 
@@ -255,12 +299,16 @@ static int xmp_utimens(const char *path, const struct timespec ts[2],
 {
 	(void) fi;
 	int res;
-
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
 	/* don't use utime/utimes since they follow symlinks */
-	res = utimensat(0, path, ts, AT_SYMLINK_NOFOLLOW);
-	if (res == -1)
+	res = utimensat(0, pmfs, ts, AT_SYMLINK_NOFOLLOW);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
-
+	}
+	free(pmfs);
 	return 0;
 }
 #endif
@@ -268,12 +316,17 @@ static int xmp_utimens(const char *path, const struct timespec ts[2],
 static int xmp_open(const char *path, struct fuse_file_info *fi)
 {
 	int res;
-
-	res = open(path, fi->flags);
-	if (res == -1)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	res = open(pmfs, fi->flags);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
+	}
 
 	close(res);
+	free(pmfs);
 	return 0;
 }
 
@@ -282,17 +335,22 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 {
 	int fd;
 	int res;
-
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
 	(void) fi;
-	fd = open(path, O_RDONLY);
-	if (fd == -1)
+	fd = open(pmfs, O_RDONLY);
+	if (fd == -1){
+		free(pmfs);
 		return -errno;
+	}
 
 	res = pread(fd, buf, size, offset);
 	if (res == -1)
 		res = -errno;
 
 	close(fd);
+	free(pmfs);
 	return res;
 }
 
@@ -301,28 +359,38 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 {
 	int fd;
 	int res;
-
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
 	(void) fi;
-	fd = open(path, O_WRONLY);
-	if (fd == -1)
+	fd = open(pmfs, O_WRONLY);
+	if (fd == -1){
+		free(pmfs);
 		return -errno;
+	}
 
 	res = pwrite(fd, buf, size, offset);
 	if (res == -1)
 		res = -errno;
 
 	close(fd);
+	free(pmfs);
 	return res;
 }
 
 static int xmp_statfs(const char *path, struct statvfs *stbuf)
 {
 	int res;
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
 
-	res = statvfs(path, stbuf);
-	if (res == -1)
+	res = statvfs(pmfs, stbuf);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
-
+	}
+	free(pmfs);
 	return 0;
 }
 
@@ -359,14 +427,19 @@ static int xmp_fallocate(const char *path, int mode,
 
 	if (mode)
 		return -EOPNOTSUPP;
-
-	fd = open(path, O_WRONLY);
-	if (fd == -1)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	fd = open(pmfs, O_WRONLY);
+	if (fd == -1){
+		free(pmfs);
 		return -errno;
+	}
 
 	res = -posix_fallocate(fd, offset, length);
 
 	close(fd);
+	free(pmfs);
 	return res;
 }
 #endif
@@ -376,34 +449,58 @@ static int xmp_fallocate(const char *path, int mode,
 static int xmp_setxattr(const char *path, const char *name, const char *value,
 			size_t size, int flags)
 {
-	int res = lsetxattr(path, name, value, size, flags);
-	if (res == -1)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	int res = lsetxattr(pmfs, name, value, size, flags);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
+	}
+	free(pmfs);
 	return 0;
 }
 
 static int xmp_getxattr(const char *path, const char *name, char *value,
 			size_t size)
 {
-	int res = lgetxattr(path, name, value, size);
-	if (res == -1)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	int res = lgetxattr(pmfs, name, value, size);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
+	}
+	free(pmfs);
 	return res;
 }
 
 static int xmp_listxattr(const char *path, char *list, size_t size)
 {
-	int res = llistxattr(path, list, size);
-	if (res == -1)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	int res = llistxattr(pmfs, list, size);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
+	}
+	free(pmfs);
 	return res;
 }
 
 static int xmp_removexattr(const char *path, const char *name)
 {
-	int res = lremovexattr(path, name);
-	if (res == -1)
+	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
+	strcpy(pmfs,PATH_PMFS);
+	strcat(pmfs,path);
+	int res = lremovexattr(pmfs, name);
+	if (res == -1){
+		free(pmfs);
 		return -errno;
+	}
+	free(pmfs);
 	return 0;
 }
 #endif /* HAVE_SETXATTR */

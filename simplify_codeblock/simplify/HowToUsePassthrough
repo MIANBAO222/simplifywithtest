@@ -1,0 +1,3 @@
+passthrough是一个定向于/mnt/pmfs 的fuse系统，将它挂载在任意目录（除/mnt/pmfs）外，请确保存在/mnt/pmfs这一目录，否则无法使用。
+执行命令是gcc -Wall passthrough.c `pkg-config fuse3 --cflags --libs` -o passthrough
+fuse版本是3.0.0，请根据实际fuse版本修改FUSE_VERSION 这一常量
