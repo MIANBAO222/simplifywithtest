@@ -102,7 +102,7 @@ void read_file_info(const char *path,const char *file,c_list file_message)
         printf("%s\n","you shuju" );
         for(i=0; i<tmpCount; i++)
         {
-            fseek(fp,tmpScount*i,tmpScount*i);
+            fseek(fp,tmpScount*i,SEEK_SET);
             if(fread(&buf,sizeof(struct file_info),1,fp)!=1) printf("file write error\n");
             printf("%s --end >> \n",buf.hash);
             printf("%d--end >> \n",buf.last_mark);

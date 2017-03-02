@@ -1,6 +1,6 @@
 //fuse
 #define FUSE_USE_VERSION 30
-#include <config.h>
+#include "config.h"
 #include <fuse.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,11 +12,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "c_list.h"
+#include "c_map.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
-#include "c_map.h"
 //openssl
 #include <openssl/sha.h>   
 #include <openssl/crypto.h>  // OPENSSL_cleanse  
@@ -52,9 +52,9 @@ void save_file_info(c_list  lt,const char *file)
         struct file_info *one=((struct file_info *)ITER_REF(iter));
         printf("savingfileinfo--->%s\n", one->hash);
            if(fwrite(one,sizeof(struct file_info),1,fp)!=1)
-            {
-                printf("file write error\n");
-            }
+    {
+        printf("file write error\n");
+    }
     }
     fclose(fp);
 }
@@ -65,14 +65,8 @@ void read_file_info(const char *file,c_list file_message)
     int i;
     if((fp=fopen(file,"rb"))==NULL)
     {
-        printf("NEWFILE");
-        struct file_info *newfileinfo;
-        newfileinfo = (struct file_info*)malloc(sizeof(struct file_info));
-        strcpy(newfileinfo->hash,"");
-        newfileinfo->last_mark = 1;
-        newfileinfo->size = 0;
-        c_list_push_back(&file_message, newfileinfo);
-        return;
+        printf("can`t open the file");
+        exit(0);
     }
 
     fseek(fp,0,SEEK_END); //定位到文件末
@@ -90,8 +84,8 @@ void read_file_info(const char *file,c_list file_message)
         printf("%s\n","you shuju" );
         for(i=0; i<tmpCount; i++)
         {
-            fseek(fp,tmpScount*i,SEEK_SET);
-            if(fread(&buf,sizeof(struct file_info),1,fp)!=1) printf("file read error\n");
+            fseek(fp,tmpScount*i,tmpScount*i);
+            if(fread(&buf,sizeof(struct file_info),1,fp)!=1) printf("file write error\n");
             printf("%s --end >> \n",buf.hash);
             printf("%d--end >> \n",buf.last_mark);
             printf("%zu --end >> \n",buf.size);
@@ -157,20 +151,12 @@ void save_filebuf_to_file(const char *file,size_t length,char filebuf[])
     printf("save file ---->%s-----sucess\n",file);
     fclose(fp);
 }
-//change------------------------------------------------------------------------
 void save_temporary_filebuf_to_file(const char *file,size_t length,char filebuf[])
 {
     FILE *fp;
-        char tem[45];//44越界了
+    char tem[44];
     strcpy(tem,file);
     strcat(tem,".tem");
-
-    if((fp=fopen(file,"rb"))!=NULL)//存在
-    {
-        printf("file ---->%s-----exist\n",tem);
-        fclose(fp);
-        return;
-    }
     if((fp=fopen(tem,"rb"))!=NULL)//存在
     {
         printf("file ---->%s-----exist\n",tem);
@@ -183,7 +169,7 @@ void save_temporary_filebuf_to_file(const char *file,size_t length,char filebuf[
         printf("canot open the file.");
         exit(0);
     }
-    printf("length-->%zu\n", length);
+    printf("length-->%d\n", length);
     if(fwrite(filebuf,length,1,fp)!=1)
     {
         printf("save file ---->---->%s-----error\n",tem);
@@ -204,8 +190,8 @@ void printHash(unsigned char *md, int len)
 } 
 void saveHash(unsigned char *md, int len,char *str)
 {
-    char hash[3];
-    int i = 0;  
+    unsigned char hash[3];
+        int i = 0;  
     for (i = 0; i < len; i++)  
     {  
         // printf("%02x", md[i]);  
@@ -218,7 +204,7 @@ static int buf_sha_calculate(const char *buf,size_t length,unsigned char *hashre
 // SHA_CTX stx;
 unsigned char md[SHA_DIGEST_LENGTH];  
 // printf("buf-->%s\n", buf);
-printf("strlen(buf)--->%zu\n", length);
+printf("strlen(buf)--->%d\n", length);
 SHA1((unsigned char *)buf, length, md);  
 strncpy(hashreturn,md,SHA_DIGEST_LENGTH);
 return 0;
@@ -232,56 +218,46 @@ void insert_empty_node(c_list lt){
     add_last->size = 0;
      c_list_push_back(&lt, add_last);
 }
-void free_list(c_list lt){
-    c_iterator iter, first, last;
-    last = c_list_end(&lt);
-    first = c_list_begin(&lt);
-    for(iter = first; !ITER_EQUAL(iter, last); ITER_INC(iter))
-    {
-        free(((struct file_info *)ITER_REF(iter)));
-    }
-}
+
+
 //保存文件引用表
-//---------------------------------change--------------------------------------------------------
-void save_map(c_list  lt)
+void save_map(c_map  m)
 {
-    printf("%s\n","save_map_start" );
     FILE *fp;
     if((fp=fopen("map_file","wb"))==NULL)
     {
         printf("canot open the file.");
-        return;
+        exit(0);
     }
     c_iterator iter, first, last;
-    last = c_list_end(&lt);
-    first = c_list_begin(&lt);
+    last = c_map_end(&m);
+    first = c_map_begin(&m);
     for(iter = first; !ITER_EQUAL(iter, last); ITER_INC(iter))
     {
-        struct file_use *init_map_file_info=((struct file_use *)ITER_REF(iter));
-        printf("savingmap_key--->%s  map_values--->%d", init_map_file_info->hash,init_map_file_info->use_num);
-        if(init_map_file_info->use_num==0){
-            printf("%s\n", "--->跳过");
-            continue;
-        }
-        printf("\n");
-       if(fwrite(init_map_file_info,sizeof(struct file_use),1,fp)!=1)
-        {
-            printf("file write error\n");
-        }
+        struct file_use one;
+        strcpy(one.hash,((c_pair *)ITER_REF(iter))->first);
+        one.use_num=*(int*)((c_pair *)ITER_REF(iter))->second;
+        printf("savingmap_key--->%s  map_values--->%d\n", one.hash,one.use_num);
+        if(fwrite(&one,sizeof(struct file_use),1,fp)!=1)
+    {
+        printf("file write error\n");
+    }
+        
     }
     fclose(fp);
 }
 
 //读取文件引用表
-void read_map(c_list lt,c_map m)
+void read_map(c_map m)
 {
     FILE *fp;
     int i;
     if((fp=fopen("map_file","rb"))==NULL)
     {
         printf("can`t open the file");
-        return;
+        exit(0);
     }
+
     fseek(fp,0,SEEK_END); //定位到文件末
     int nFileLen = ftell(fp); //文件长度
     printf("文件长:%d\n", nFileLen);
@@ -289,49 +265,65 @@ void read_map(c_list lt,c_map m)
     int tmpScount = sizeof(struct file_use);
     printf("大小:%d\n", tmpScount);
     tmpCount = nFileLen / tmpScount ;
-    printf(" 节点数:%d\n", tmpCount);
+    printf(" 节点数:%d\n", tmpScount);
     
     struct file_use buf;
-    struct file_use *message;
-    c_pair *pair;
+    c_pair *p;
     if(tmpCount!=0)
     {
         printf("%s\n","有数据" );
         for(i=0; i<tmpCount; i++)
         {
-            printf("节点%d\n",i+1 );
             fseek(fp,tmpScount*i,tmpScount*i);
             if(fread(&buf,sizeof(struct file_use),1,fp)!=1) printf("file write error\n");
             printf("%s --end >> \n",buf.hash);
             printf("%d--end >> \n",buf.use_num);
-            message = (struct file_use*)malloc(sizeof(struct file_use));
-            strcpy(message->hash,buf.hash);
-            message->use_num = buf.use_num;
-            c_list_push_back(&lt, message);
-            pair=(struct c_pair*)malloc(sizeof(struct c_pair));
-            *pair=c_make_pair(&message->hash,&message->use_num);
-            printf("读取--->key值：%s\n", pair->first);
-            printf("读取--->value值：%d\n", *(int *)pair->second);
-            c_map_insert(&m, pair);
+            p=(struct c_pair*)malloc(sizeof(struct c_pair));
+            char *key=(char *)malloc(sizeof(char)*41);
+            int *num=(int *)malloc(sizeof(int));
+            strncpy(key,buf.hash,41);
+            *num = buf.use_num;
+            *p=c_make_pair(key,num);
+            printf("存储在c_pair p中的key值：%s\n", p->first);
+            printf("存储在c_pair p中的value值：%d\n", *(int *)p->second);
+            c_map_insert(&m, p);
         }
     }
     else
     {
         printf("%s\n","没数据" );
     }
+
     fclose(fp);
+}
+void free_map(c_pmap m)
+{
+    c_iterator iter = c_map_begin(m);
+    c_iterator end = c_map_end(m);
+    printf("free-->map is:\n");
+    for(; !ITER_EQUAL(iter, end); ITER_INC(iter))
+    {
+        printf("key = %s, value = %d\n",((c_ppair)ITER_REF(iter))->first,*(int *)((c_ppair)ITER_REF(iter))->second);
+        char *key=(((c_ppair)ITER_REF(iter))->first);
+        int *num=*(int *)(((c_ppair)ITER_REF(iter))->second);
+        c_pair *p=(c_ppair)ITER_REF(iter);
+        printf("free-->key = %s, value = %d\n",key,num);
+        free(key);
+        free(num);
+    }
 }
 //打印map
 void print_map(c_pmap pt)
 {
-    c_iterator iter = c_map_begin(pt);
-    c_iterator end = c_map_end(pt);
-    printf("map is:\n");
-    for(; !ITER_EQUAL(iter, end); ITER_INC(iter))
-    {
-        printf("key = %s   value=%d\n",
-            ((c_ppair)ITER_REF(iter))->first, *(int *)((c_ppair)ITER_REF(iter))->second);
-    }
+	c_iterator iter = c_map_begin(pt);
+	c_iterator end = c_map_end(pt);
+	printf("map is:\n");
+	for(; !ITER_EQUAL(iter, end); ITER_INC(iter))
+	{
+		printf("key = %s, value = %d\n",
+			((c_ppair)ITER_REF(iter))->first,
+			*(int *)((c_ppair)ITER_REF(iter))->second);
+	}
 }
 
 static inline int char_comparer(void * x, void * y)
@@ -339,15 +331,8 @@ static inline int char_comparer(void * x, void * y)
     //return *(int *)(x) - *(int *)(y);
     return strcmp((char *)(x) , (char *)(y));
 }
-// int rename_all_tem_file(const char *dir, int depth){
-//      DIR *dp;  
-//     struct dirent *entry;  
-//     struct stat statbuf;  
-//     if((dp = opendir(dir)) == NULL) {  
-//         fprintf(stderr, "cannot open directory: %s\n", dir);  
-//         return ;  
-//     }  
-// }
+
+
 int main()
 {
     const char *file="filetest";
@@ -366,11 +351,17 @@ int main()
     new_one->size = granularity;
     c_list_push_back(&file_list, new_one);
     save_file_info(file_list,file);
-    free_list(file_list);
+
+    //文件引用表初始化
+    c_list old_lt;
+    c_list_create(&old_lt, NULL);
+    read_file_info(file,old_lt);//readfile
+
+
     //start test
     unsigned char hashreturn[20]={0};
-    char hashtostr[41];
-    memset(hashtostr,'\0',sizeof(hashtostr));
+    char hashtostr[41]={0};
+    hashtostr[41]='\0';
     const char *buf="abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
     size_t daxiao=52;//daxiao
     off_t juli=2044;//kaishi
@@ -405,7 +396,7 @@ int main()
                     {
                         memcpy(filebuf+nowjuli,buf+buf_juli,nowdaxia);//写入filebuf
                         buf_juli=buf_juli+nowdaxia;
-                        printf("buf_juli--->%ld\n", buf_juli);
+                        printf("buf_juli--->%d\n", buf_juli);
                         buf_sha_calculate(filebuf,granularity,hashreturn);//计算
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
@@ -419,7 +410,7 @@ int main()
                     if(copy_file_to_filebuf(one->hash,one->size,filebuf)==0)
                     {
                         memcpy(filebuf+nowjuli,buf+buf_juli,daxiao-buf_juli);//写入filebuf
-                        printf("buf_juli--->%ld\n", buf_juli);
+                        printf("buf_juli--->%d\n", buf_juli);
                         buf_sha_calculate(filebuf,granularity,hashreturn);//计算
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
@@ -447,8 +438,8 @@ int main()
                 size_t nowdaxia=granularity-nowjuli;//可以写入的的大小
                 if(nowdaxia<daxiao-buf_juli)
                 {
-                    printf("daxiao--->%zu\n", daxiao);
-                    printf("buf_juli--->%ld\n", buf_juli);
+                    printf("daxiao--->%d\n", daxiao);
+                    printf("buf_juli--->%d\n", buf_juli);
                     char filebuf[granularity]={0};
                     int openflag=copy_file_to_filebuf(one->hash,one->size,filebuf);
                     if(openflag==0|strcmp(one->hash,"")==0)
@@ -486,7 +477,7 @@ int main()
                             memset(filebuf+one->size, '\0', nowjuli-one->size); 
                         }
                         memcpy(filebuf+nowjuli,buf+buf_juli,daxiao-buf_juli);//写入filebuf
-                        printf("nowjuli+nowdaxia--->%lu\n", nowjuli+nowdaxia);
+                        printf("nowjuli+nowdaxia--->%d\n", nowjuli+nowdaxia);
                         buf_sha_calculate(filebuf,nowjuli+daxiao-buf_juli,hashreturn);//计算
                         saveHash(hashreturn, SHA_DIGEST_LENGTH,hashtostr); //转换为40位16进制哈希值
                         printf("%s\n",hashtostr );
@@ -529,109 +520,135 @@ int main()
         }
     }
     //
-    printf("文件引用表测试\n");
-    c_list lt_old;
-    c_list file_use_list;
-    c_list_create(&lt_old, NULL);
-    c_list_create(&file_use_list, NULL);
-    read_file_info(file,lt_old);//readfile
+    
+    //
+    save_file_info(lt,file);
+    
+
+//文件引用表
+    printf("文件引用表代码测试开始\n");
+    c_list now_lt;
+    c_list_create(&now_lt, NULL);
+    read_file_info(file,now_lt);//readfile
+    c_iterator iter1, first1, last1;//原list
+    c_iterator iter2, first2, last2;//现list
+    printf("\n");
+
     c_map map_init;//存储文件引用表的map初始化
     c_map_create(&map_init, char_comparer);//创建map
-    c_pair *init_pair;
-    struct file_use *init_node;
-    c_iterator iter_old, first_old, last_old;//原list
-    //模拟初始化 value为1
-    first_old = c_list_begin(&lt_old);
-    last_old = c_list_end(&lt_old);
-    for(iter_old = first_old; !ITER_EQUAL(iter_old, last_old); ITER_INC(iter_old))
-    { 
-    struct file_info *init_map_file_info=((struct file_info *)ITER_REF(iter_old));
-    init_node=malloc(sizeof(struct file_use));
-    strcpy(init_node->hash,init_map_file_info->hash);
-    init_node->use_num=1;
-    printf("init_key--->%s  init_value--->%d\n", init_node->hash,init_node->use_num);
-    c_list_push_back(&file_use_list, init_node);
-    init_pair=malloc(sizeof(struct c_pair));
-    *init_pair = c_make_pair(&init_node->hash,&init_node->use_num);
-    c_map_insert(&map_init, init_pair);//插入
-    }
-    print_map(&map_init);
-    save_map(file_use_list);
-    c_map_destroy(&map_init);
-    free_list(file_use_list);
-    //start_test_map
-    c_list new_file_use;
-    c_list_create(&new_file_use,NULL);
-    c_map map_new;
-    c_map_create(&map_new, char_comparer);//创建map
-    printf("%s\n","!!!!------------>读取map开始" );
-    read_map(new_file_use,map_new);
-    print_map(&map_new);
+    c_pair *q;
+   
+    int *init_times;//引用次数
+    
+    int count=0;
 
-    c_iterator iter1, first1, last1,target,map_end;//原list
-    last1 = c_list_end(&lt_old);
-    first1 = c_list_begin(&lt_old);
-    map_end = c_map_end(&map_new);
+    char **key;
+    key=(char **)malloc(sizeof(char *));
+    *key =(char *)malloc(sizeof(char)*41);
+
+    last1 = c_list_end(&old_lt);
+    first1 = c_list_begin(&old_lt);
+    last2 = c_list_end(&now_lt);
+    first2 = c_list_begin(&now_lt);
+
     for(iter1 = first1; !ITER_EQUAL(iter1, last1); ITER_INC(iter1))
+    {       
+         struct file_info *test1=((struct file_info *)ITER_REF(iter1));
+         *key = &test1->hash;
+        //将原链表里的文件引用信息装进文件引用表
+         init_times=malloc(sizeof(int *));
+         *init_times=1;
+         q=malloc(sizeof(struct c_pair));
+         *q = c_make_pair(*key,init_times);
+         c_map_insert(&map_init, q);//插入
+    }  
+    print_map(&map_init);//第一次输出map
+    save_map(map_init);
+
+    c_map map;//文件引用表
+    c_map_create(&map, char_comparer);//创建map
+    printf("读取map_file文件内容开始\n");
+    read_map(map);
+    printf("读取map_file文件内容结束\n");
+
+    iter1 = first1;
+    int len=c_list_size(&old_lt);
+    for(iter2 = first2; !ITER_EQUAL(iter2, last2); ITER_INC(iter2))//外层迭代比较
     {
-        struct file_info *file_node=((struct file_info *)ITER_REF(iter1));
-        printf("oldlist_key--->%s \n", file_node->hash);
-        target = c_map_find(&map_new, &file_node->hash);
-        if(!ITER_EQUAL(map_end, target)) {
-            if(*(int*)(((c_ppair)ITER_REF(target))->second)>0){
+        struct file_info *test2=((struct file_info *)ITER_REF(iter2));
+        struct file_info *test1=((struct file_info *)ITER_REF(iter1));
+        if(count<len)//判断原链表是否遍历完毕
+        { 
+            count=count+1;
+            if(!strcmp(&test1->hash,&test2->hash))//文件未改动
+            {
+            //printf("无改动\n");
+            }
+            else //文件被修改过
+            {
+                 //printf("文件被修改过\n");
+                 c_iterator target,end;
+                 c_iterator map_end = c_map_end(&map);
+                 target = c_map_find(&map, &test2->hash); // 根据新链表中节点key值查找map值          
+                 if(!ITER_EQUAL(map_end, target)) 
+                 {//若在map中找到则修改map中values+1
+                 
+                 *(int*)(((c_ppair)ITER_REF(target))->second)=*(int*)(((c_ppair)ITER_REF(target))->second)+1;
+                 }
+                 else  //若在map中找不到则新增map值
+                 {  
+                     *key = &test2->hash;
+                     init_times=malloc(sizeof(int *));
+                     *init_times=1;
+                     q=malloc(sizeof(struct c_pair));
+                     *q = c_make_pair(*key,init_times);
+                     c_map_insert(&map, q);//插入
+                 }
+
+                 //printf("%s\n", &test1->hash);
+                 target = c_map_find(&map, &test1->hash);// 根据原链表中节点key值查找map值                  
+                 //修改map中values-1
                 *(int*)(((c_ppair)ITER_REF(target))->second)=*(int*)(((c_ppair)ITER_REF(target))->second)-1;
-                printf(" 现在的操作是value-1\n" );
-                printf("map操作成功\n");
-                printf("key = %s   value=%d\n",((c_ppair)ITER_REF(target))->first, *(int *)((c_ppair)ITER_REF(target))->second);
-            }
-           else{
-            printf("map状态错误:--->");
-            printf("key = %s   value=%d\n",((c_ppair)ITER_REF(target))->first, *(int *)((c_ppair)ITER_REF(target))->second);
-            printf(" 现在的操作是value-1\n" );
-           }
+
+                 //检测到values==0则从map中删除
+                 if(*(int*)(((c_ppair)ITER_REF(target))->second)==0)
+                 {
+                 c_map_erase(&map, target);//删除特定元素
+                 }
+             }
+             ITER_INC(iter1);
         }
+
+        //新链表中的新节点，新增map值
+         *key = &test2->hash;
+         init_times=malloc(sizeof(int *));
+         *init_times=1;
+         q=malloc(sizeof(struct c_pair));
+         *q = c_make_pair(*key,init_times);
+         c_map_insert(&map, q);//插入
     }
-     last1 = c_list_end(&lt);
-    first1 = c_list_begin(&lt);
-    struct file_use *new_node;
-    c_pair *new_pair;
-    for(iter1 = first1; !ITER_EQUAL(iter1, last1); ITER_INC(iter1))
+
+    for(;!ITER_EQUAL(iter1, last1);ITER_INC(iter1))//若旧链表长于新链表
     {
-        struct file_info *file_node=((struct file_info *)ITER_REF(iter1));
-        printf("newlist_key--->%s \n", file_node->hash);
-        target = c_map_find(&map_new, &file_node->hash);
-        if(!ITER_EQUAL(map_end, target)) {
-            if(*(int*)(((c_ppair)ITER_REF(target))->second)>=0){
-                *(int*)(((c_ppair)ITER_REF(target))->second)=*(int*)(((c_ppair)ITER_REF(target))->second)+1;
-                printf(" 现在的操作是value+1\n" );
-                printf("map操作成功\n");
-                printf("key = %s   value=%d\n",((c_ppair)ITER_REF(target))->first, *(int *)((c_ppair)ITER_REF(target))->second);
-            }
-           else{
-            printf("map状态错误:--->");
-            printf("key = %s   value=%d\n",((c_ppair)ITER_REF(target))->first, *(int *)((c_ppair)ITER_REF(target))->second);
-            printf(" 现在的操作是value+1\n" );
-           }
-        }
-        else{
-           new_node=malloc(sizeof(struct file_use));
-            strcpy(new_node->hash,file_node->hash);
-            new_node->use_num=1;
-            c_list_push_back(&new_file_use,new_node);
-            new_pair=(struct c_pair*)malloc(sizeof(struct c_pair));
-            *new_pair=c_make_pair(&new_node->hash,&new_node->use_num);
-            printf("插入--->key值：%s\n", new_pair->first);
-            printf("插入--->value值：%d\n", *(int *)new_pair->second);
-            c_map_insert(&map_new, new_pair);
-        }
+         struct file_info *test1=((struct file_info *)ITER_REF(iter1));
+         c_iterator target;
+         target = c_map_find(&map, &test1->hash);
+         //修改map中values-1
+         *(int*)(((c_ppair)ITER_REF(target))->second)=*(int*)(((c_ppair)ITER_REF(target))->second)-1;
+
+         //检测到values==0则从map中删除
+         if(*(int*)(((c_ppair)ITER_REF(target))->second)==0)
+         {
+             c_map_erase(&map, target);//删除特定元素
+         }
     }
-    print_map(&map_new);
-    save_map(new_file_use);
-    save_file_info(lt,file);
-    c_map_destroy(&map_new);
-    free_list(lt);
-    free_list(new_file_use);
-    // rename_all_tem_file();
+
+    print_map(&map);//第二次输出map（经过处理）
+    save_map(map);
+    // free(q);
+    // free(key);
+    // free(init_times);
+    free_map(&map);
     return 0;
 }
 
