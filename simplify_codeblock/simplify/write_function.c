@@ -19,9 +19,7 @@
 //openssl
 #include <openssl/sha.h>   
 #include <openssl/crypto.h>  // OPENSSL_cleanse  
-#define granularity 1024//文件粒度
-#define PATH_PMFS "/mnt/pmfs"
-#define PATH_PMFS_BUF "/mnt/pmfs/"
+#include "fuse_define.h"
 
 struct file_info//list
 {
@@ -37,17 +35,13 @@ struct file_use//map
 };
 
 //保存文件块表
-void save_file_info(const char *path,c_list  lt,const char *file)
+void save_file_info(const char *file,c_list  lt)
 {
     FILE *fp;
-    char *tem=malloc(strlen(path)+strlen(PATH_PMFS)+strlen(file));
-    strcpy(tem,PATH_PMFS);
-    strcat(tem,path);
-    strcat(tem,file);
-    if((fp=fopen(tem,"wb"))==NULL)
+    if((fp=fopen(file,"wb"))==NULL)
     {
-        printf("canot open the file.");
-        free(tem);
+        printf("canot open the file-----in fuction save_file_info--->%s\n",file);
+        fclose(fp);
         return;
     }
     c_iterator iter, first, last;
@@ -62,7 +56,6 @@ void save_file_info(const char *path,c_list  lt,const char *file)
         printf("file write error\n");
     }
     }
-    free(tem);
     fclose(fp);
 }
 //读取文件块表
@@ -181,7 +174,7 @@ void save_filebuf_to_file(const char *file,size_t length,char filebuf[])
     }
     if((fp=fopen(tem,"wb"))==NULL)
     {
-        printf("canot open the file.");
+        printf("canot open the file---in fuction save_filebuf_to_file--->%s\n",tem);
         exit(0);
     }
     if(fwrite(filebuf,length,1,fp)!=1)
@@ -198,10 +191,9 @@ void save_temporary_filebuf_to_file(const char *file,size_t length,char filebuf[
     //     char tem[45];//44越界了
     // strcpy(tem,file);
     // strcat(tem,".tem");
-    char *tem=malloc(strlen(PATH_PMFS_BUF)+sizeof(char)*45);
+    char *tem=malloc(strlen(PATH_PMFS_BUF)+sizeof(char)*41);
     strcpy(tem,PATH_PMFS_BUF);
     strcat(tem,file);
-    strcat(tem,".tem");
     if((fp=fopen(tem,"rb"))!=NULL)//存在
     {
         printf("file ---->%s-----exist\n",tem);
@@ -212,7 +204,7 @@ void save_temporary_filebuf_to_file(const char *file,size_t length,char filebuf[
 
     if((fp=fopen(tem,"wb"))==NULL)
     {
-        printf("canot open the file.");
+        printf("canot open the file-----in fuction save_temporary_filebuf_to_file--->%s\n",tem);
         exit(0);
     }
     printf("length-->%zu\n", length);

@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include "write_function.c"
 #define FUSE_USE_VERSION 30
-#define PATH_PMFS "/mnt/pmfs"
+// #define PATH_PMFS "/mnt/pmfs"
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -356,8 +356,8 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 static int xmp_write(const char *path, const char *buf, size_t size,
 		     off_t offset, struct fuse_file_info *fi)
 {
-	int fd;
-	int res;
+	// int fd;
+	// int res;
 	char *pmfs=malloc(strlen(path)+strlen(PATH_PMFS));
 	strcpy(pmfs,PATH_PMFS);
 	strcat(pmfs,path);
@@ -526,7 +526,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
     //
     
     //
-    save_file_info(path,lt,pmfs);
+    save_file_info(pmfs,lt);
     free_list(lt);
     free(pmfs);
     return buf_juli;
