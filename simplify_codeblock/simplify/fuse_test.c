@@ -339,6 +339,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	strcat(pmfs,path);
 	(void) fi;
 	fd = open(pmfs, O_RDONLY);
+	printf("READING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--->%s\n", pmfs);
 	if (fd == -1){
 		free(pmfs);
 		return -errno;
@@ -370,9 +371,9 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	size_t daxiao=size;//daxiao
 	off_t juli=offset;//kaishi
 	c_list lt;
-	c_iterator iter, first, last;
 	c_list_create(&lt, NULL);
-	read_file_info(path,pmfs,lt);//readfile
+	c_iterator iter, first, last;
+	read_file_info(pmfs,lt);//readfile
 	last = c_list_end(&lt);
 	first = c_list_begin(&lt);
 	off_t buf_juli=0;
@@ -523,10 +524,26 @@ static int xmp_write(const char *path, const char *buf, size_t size,
             }
         }
     }
-    //
-    
-    //
+    c_list lt_old,file_map_list;
+    c_list_create(&lt_old,NULL);
+    c_list_create(&file_map_list,NULL);
+     c_map map_new;
+    c_map_create(&map_new, char_comparer);//创建map
+    read_file_info(pmfs,lt_old);//readfile
     save_file_info(pmfs,lt);
+     //修改文件引用表
+   
+    printf("%s\n","!!!!------------>读取map开始" );
+    read_map(file_map_list,map_new);
+    print_map(&map_new);
+    change_map(lt_old,lt,map_new,file_map_list);
+    print_map(&map_new);
+    save_map(file_map_list);
+
+    //
+    c_map_destroy(&map_new);
+    free_list(lt_old);
+    free_list(file_map_list);
     free_list(lt);
     free(pmfs);
     return buf_juli;
